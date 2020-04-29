@@ -24,7 +24,7 @@ void scene_model::setup_data(std::map<std::string,GLuint>& shaders, scene_struct
 
     // Shoulder part and arm are displayed as cylinder
     mesh_drawable shoulder = mesh_primitive_cylinder(radius_arm, {0,0,0}, {-length_arm,0,0});
-    mesh_drawable arm = mesh_primitive_cylinder(radius_arm, {0,0,0}, {-length_arm/1.5f,-length_arm/1.0f,0});
+    mesh_drawable arm = mesh_primitive_cylinder(radius_arm, {0,0,0}, {0,-length_arm/1.5f,0});
 
     // An elbow displayed as a sphere
     mesh_drawable elbow = mesh_primitive_sphere(0.055f);
@@ -81,7 +81,7 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
     // Rotation of the shoulder around the y axis
     mat3 const R_shoulder = rotation_from_axis_angle_mat3({0,1,0}, std::sin(2*3.14f*(t-0.4f)) );
     // Rotation of the arm around the y axis (delayed with respect to the shoulder)
-    mat3 const R_arm = rotation_from_axis_angle_mat3({0,1,0}, std::sin(2*3.14f*(t-0.6f)) );
+    mat3 const R_arm = rotation_from_axis_angle_mat3({0,0,1}, 2*3.14f*(t-0.6f));
     // Symmetry in the x-direction between the left/right parts
     mat3 const Symmetry = {-1,0,0, 0,1,0, 0,0,1};
 
