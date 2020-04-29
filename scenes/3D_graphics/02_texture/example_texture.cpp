@@ -14,8 +14,8 @@ void scene_model::setup_data(std::map<std::string,GLuint>& , scene_structure& , 
 {
     // Create a surface with (u,v)-texture coordinates
     mesh surface_cpu;
-    surface_cpu.position     = {{-1,-1,0}, { 1,-1,0}, { 1, 1,0}, {-1, 1,0}};
-    surface_cpu.texture_uv   = {{0,1}, {1,1}, {1,0}, {0,0}};
+    surface_cpu.position     = {{-0.5,-0.5,0}, { 1,-1,0}, { 1, 1,0}, {-1, 1,0}};
+    surface_cpu.texture_uv   = {{0,1.5}, {1.5,1.5}, {1.5,0}, {0,0}};
     surface_cpu.connectivity = {{0,1,2}, {0,2,3}};
 
     surface = surface_cpu;
@@ -36,8 +36,8 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
     // Before displaying a textured surface: bind the associated texture id
     glBindTexture(GL_TEXTURE_2D, texture_id);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
 
     draw(surface, scene.camera, shaders["mesh"]);
 
