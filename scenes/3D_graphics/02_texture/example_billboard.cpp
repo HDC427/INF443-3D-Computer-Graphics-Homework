@@ -47,7 +47,7 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
 
     // Disable depth buffer writing
     //  - Transparent elements cannot use depth buffer
-    //  - They are supposed to be display from furest to nearest elements
+    //  - They are supposed to be display from furthest to nearest elements
     glDepthMask(false);
 
 
