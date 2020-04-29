@@ -13,6 +13,7 @@ static size_t index_at_value(float t, const vcl::buffer<vec3t> &v);
 
 static vec3 linear_interpolation(float t, float t1, float t2, const vec3& p1, const vec3& p2);
 
+static vec3 cardinal_spline_interpolation(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K);
 
 void scene_model::setup_data(std::map<std::string,GLuint>& shaders, scene_structure& scene, gui_structure& )
 {
@@ -33,8 +34,13 @@ void scene_model::setup_data(std::map<std::string,GLuint>& shaders, scene_struct
 
     // Set timer bounds
     // You should adapt these extremal values to the type of interpolation
-    timer.t_min = keyframes[0].t;                   // first time of the keyframe
-    timer.t_max = keyframes[keyframes.size()-1].t;  // last time of the keyframe
+    // timer.t_min = keyframes[0].t;                   // first time of the keyframe
+    // timer.t_max = keyframes[keyframes.size()-1].t;  // last time of the keyframe
+    // timer.t = timer.t_min;
+    // Exercise 4.1, adapte extremal values for spline interpolation
+    if(keyframes.size()<4) exit(1);
+    timer.t_min = keyframes[1].t;
+    timer.t_max = keyframes[keyframes.size()-2].t;
     timer.t = timer.t_min;
 
     // Prepare the visual elements
@@ -85,22 +91,30 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
 
     // Preparation of data for the linear interpolation
     // Parameters used to compute the linear interpolation
-    const float t1 = keyframes[idx  ].t; // = t_i
-    const float t2 = keyframes[idx+1].t; // = t_{i+1}
+    // const float t1 = keyframes[idx  ].t; // = t_i
+    // const float t2 = keyframes[idx+1].t; // = t_{i+1}
 
+    // const vec3& p1 = keyframes[idx  ].p; // = p_i
+    // const vec3& p2 = keyframes[idx+1].p; // = p_{i+1}
+
+
+
+    // // Compute the linear interpolation here
+    // const vec3 p = linear_interpolation(t,t1,t2,p1,p2);
+
+    // Exercise 4.1
+    // Create and call a function cardinal_spline_interpolation(...) instead
+    const float t0 = keyframes[idx-1].t; // t_{i-1}
+    const float t1 = keyframes[idx  ].t; // t_i
+    const float t2 = keyframes[idx+1].t; // t_{i+1}
+    const float t3 = keyframes[idx+2].t; // t_{i+2}
+
+    const vec3& p0 = keyframes[idx-1].p; // = p_{i-1}
     const vec3& p1 = keyframes[idx  ].p; // = p_i
     const vec3& p2 = keyframes[idx+1].p; // = p_{i+1}
+    const vec3& p3 = keyframes[idx+2].p; // = p_{i+2}
 
-
-
-    // Compute the linear interpolation here
-    const vec3 p = linear_interpolation(t,t1,t2,p1,p2);
-
-    // Create and call a function cardinal_spline_interpolation(...) instead
-    // ...
-
-
-
+    const vec3 p = cardinal_spline_interpolation(t,t0,t1,t2,t3,p0,p1,p2,p3,K);
 
     // Store current trajectory of point p
     trajectory.add_point(p);
@@ -221,6 +235,7 @@ void scene_model::set_gui()
 {
     ImGui::SliderFloat("Time", &timer.t, timer.t_min, timer.t_max);
     ImGui::SliderFloat("Time scale", &timer.scale, 0.1f, 3.0f);
+    ImGui::SliderFloat("K", &K, 0.0f, 1.0f);
 
     ImGui::Text("Display: "); ImGui::SameLine();
     ImGui::Checkbox("keyframe", &gui_scene.display_keyframe); ImGui::SameLine();
@@ -264,6 +279,17 @@ static vec3 linear_interpolation(float t, float t1, float t2, const vec3& p1, co
 
     return p;
 }
+
+// Exercise 4.1
+static vec3 cardinal_spline_interpolation(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K)
+{
+    const float s = (t-t1)/(t2-t1);
+    const vec3 d1 = 2*K*(p2-p0)/(t2-t0);
+    const vec3 d2 = 2*K*(p3-p1)/(t3-t1);
+
+    return (2*s*s*s-3*s*s+1)*p1+(s*s*s-2*s*s+s)*d1+(-2*s*s*s+3*s*s)*p2+(s*s*s-s*s)*d2;
+}
+
 
 
 #endif

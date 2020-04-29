@@ -42,6 +42,7 @@ struct scene_model : scene_base
 
     gui_scene_structure gui_scene;
     vcl::timer_interval timer;
+    float K = 0.5;
 
 };
 
