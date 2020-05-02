@@ -4,15 +4,25 @@
 
 #ifdef SCENE_3D_GRAPHICS
 
+using namespace vcl;
+
 // Stores some parameters that can be set from the GUI
 struct gui_scene_structure
 {
     bool wireframe;
 };
 
+// 4. Descriptive animation
 struct vec3t{
-    vcl::vec3 p; // position
+    vec3 p; // position
     float t;     // time
+};
+
+// 5. Simulation
+struct particle_element
+{
+    vec3 p; // Position
+    vec3 v; // Speed
 };
 
 struct scene_model : scene_base
@@ -46,27 +56,42 @@ struct scene_model : scene_base
     // Exercise 4.3, initialize bird position and timer
     void initialize_bird();
 
-     // Exercise 4.3, outer bird animation
-    void update_global_position(vcl::hierarchy_mesh_drawable_node &obj, float t, vcl::buffer<vec3t> const& v);
-    float K = 0.5;
+    // Exercise 4.3, outer bird animation
+    vec3 update_global_position(hierarchy_mesh_drawable_node &obj, float t, buffer<vec3t> const& v);
+    float K;
+    vec3 cardinal_spline_interpolation(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K);
+    vec3 cardinal_spline_tangent(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K);
+
+    // Exercise 5, simulate a rope
+    const int N_rope_node = 40;
+    void initialize_rope(const vec3& initial_end_point);
+    /* Compute spring force applied on particle pi from particle pj */
+    vec3 spring_force(const vec3& pi, const vec3& pj, float L0, float K);
+    void update_rope(float dt);
 
     // visual representation of a surface
-    vcl::mesh_drawable terrain;
+    mesh_drawable terrain;
 
-    std::vector<vcl::vec3> tree_position;
-    std::vector<vcl::vec3> grass_position;
-    vcl::mesh_drawable trunk;
-    vcl::mesh_drawable foliage;
-    vcl::mesh_drawable grass;
+    std::vector<vec3> tree_position;
+    std::vector<vec3> grass_position;
+    mesh_drawable trunk;
+    mesh_drawable foliage;
+    mesh_drawable grass;
     GLuint texture_id;
     GLuint billboard_id;
 
-    vcl::hierarchy_mesh_drawable bird;
-    // Data (p_i,t_i)
-    vcl::buffer<vec3t> keyframes; // Given (position,time)
+    hierarchy_mesh_drawable bird;
+    // bird's key position
+    buffer<vec3t> keyframes; // Given (position,time)
+
+    std::vector<vec3> rope_p;
+    std::vector<vec3> rope_v;
+    mesh_drawable rope_node;
+    float L0;
+    segment_drawable_immediate_mode seg_drawer;
 
     gui_scene_structure gui_scene;
-    vcl::timer_interval timer;
+    timer_interval timer;
 };
 
 #endif

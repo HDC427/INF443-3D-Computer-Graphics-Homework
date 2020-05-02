@@ -6,6 +6,7 @@
 
 // Add vcl namespace within the current one - Allows to use function from vcl library without explicitely preceeding their name with vcl::
 using namespace vcl;
+using namespace std;
 
 float evaluate_terrain_z(float u, float v);
 vec3 evaluate_terrain(float u, float v);
@@ -16,113 +17,6 @@ mesh create_tree_foliage(float radius, float height, float z_offset);
 mesh create_grass();
 //mesh create_sky();
 hierarchy_mesh_drawable create_bird();
-vec3 cardinal_spline_interpolation(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K);
-vec3 cardinal_spline_tangent(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K);
-
-
-// Exercise 2.3, function to initialize tree positions
-void scene_model::update_tree_position(){
-    srand((unsigned int)(time(NULL)));
-    int N = rand()%10;
-    tree_position.resize(N);
-    for(int i=0;i<N;i++){
-        float u = rand_interval();
-        float v = rand_interval();
-        tree_position[i] = evaluate_terrain(u, v) - vec3(0,0,0.1);
-    }
-}
-
-// Exercise 3.3, function to initialize grass positions
-void scene_model::update_grass_position(){
-    srand((unsigned int)(time(NULL)));
-    int N = rand()%50;
-    grass_position.resize(N);
-    for(int i=0;i<N;i++){
-        float u = rand_interval();
-        float v = rand_interval();
-        grass_position[i] = evaluate_terrain(u, v) - vec3(0,0,0.05);
-    }
-}
-
-// Exercise 4.3, initialize bird position and timer
-void scene_model::initialize_bird(){
-    // Initial Keyframe data vector of (position, time)
-   /* keyframes = { { {-1,1,2}   , 0.0f  },
-                  { {0,1,2}    , 1.0f  },
-                  { {1,1,2}    , 2.0f  },
-                  { {1,2,2}    , 2.5f  },
-                  { {2,2,2}    , 3.0f  },
-                  { {2,2,3}    , 3.5f  },
-                  { {2,0,3.5}  , 3.75f  },
-                  { {1.5,-1,3} , 4.5f  },
-                  { {1.5,-1,2} , 5.0f  },
-                  { {1,-1,2}   , 6.0f  },
-                  { {0,-0.5,2} , 7.0f },
-                  { {-1,-0.5,2}, 8.0f },
-                  { {-1,1,2}   , 9.0f },
-                }; */
-    for(int i=0;i<10;i++){
-        keyframes.push_back({{3*cos(2*3.14f*i/10), 3*sin(2*3.14f*i/10), 2}, float(i)});
-    }
-    
-    // Initial orientation
-    vec3 initial_ori = keyframes[1].p - keyframes[keyframes.size()-1].p;
-    bird["body"].transform.rotation = rotation_between_vector_mat3({1,0,0}, initial_ori);
-
-    // Set timer bounds
-    if(keyframes.size()<4) exit(1);
-    timer.t_min = keyframes[0].t;
-    timer.t_max = keyframes[keyframes.size()-1].t;
-    timer.t = timer.t_min;
-}
-
- // Exercise 4.2, inner bird animation
-void scene_model::update_bird_inner(float t){
-
-    //head nodding
-    mat3 const R_head = rotation_from_axis_angle_mat3({0,1,0}, 0.25*std::sin(3.14f*t) );
-    bird["head"].transform.rotation = R_head;
-
-    //wing filpping
-    mat3 const R_Bwing = rotation_from_axis_angle_mat3({1,0,0}, 0.5*std::sin(2*3.14f*t) );
-    bird["back_l"].transform.rotation = R_Bwing;
-    bird["back_r"].transform.rotation = mat3{1,0,0, 0,-1,0, 0,0,1}*R_Bwing;
-
-    mat3 const R_Fwing = rotation_from_axis_angle_mat3({1,0,0}, 0.5*std::sin(2*3.14f*t) );
-    bird["front_l"].transform.rotation = R_Fwing;
-    bird["front_r"].transform.rotation = R_Fwing;
-}
-
-// Exercise 4.3, outer bird animation
-void scene_model::update_global_position(hierarchy_mesh_drawable_node &obj, float t, vcl::buffer<vec3t> const& v){
-    //index_at_value t
-    const size_t N = v.size();
-    assert(v.size()>=2);
-    assert(t>=v[0].t);
-    assert(t<v[N-1].t);
-
-    size_t idx=0;
-    while( v[idx+1].t<t )
-        ++idx;
-
-    const float t0 = keyframes[(idx-1)%N].t; // t_{i-1}
-    const float t1 = keyframes[ idx   %N].t; // t_i
-    const float t2 = keyframes[(idx+1)%N].t; // t_{i+1}
-    const float t3 = keyframes[(idx+2)%N].t; // t_{i+2}
-
-    const vec3& p0 = keyframes[(idx-1)%N].p; // = p_{i-1}
-    const vec3& p1 = keyframes[ idx   %N].p; // = p_i
-    const vec3& p2 = keyframes[(idx+1)%N].p; // = p_{i+1}
-    const vec3& p3 = keyframes[(idx+2)%N].p; // = p_{i+2}
-
-    obj.transform.translation = cardinal_spline_interpolation(t,t0,t1,t2,t3,p0,p1,p2,p3,K);
-
-    // rotation according to tangent
-   const float dt = 0.2;
-   vec3 tan0 = cardinal_spline_tangent(t,t0,t1,t2,t3,p0,p1,p2,p3,K);
-   vec3 tan1 = cardinal_spline_tangent(t+dt,t0,t1,t2,t3,p0,p1,p2,p3,K);
-   obj.transform.rotation = rotation_between_vector_mat3({1,0,0}, tan0);
-}
 
 /** This function is called before the beginning of the animation loop
     It is used to initialize all part-specific data */
@@ -151,6 +45,14 @@ void scene_model::setup_data(std::map<std::string,GLuint>& , scene_structure& sc
     // Exercise 4.2, 4.3 bird
     bird = create_bird();
     initialize_bird();
+    K = 0.5f;
+
+    // Exercise 5, rope
+    initialize_rope(keyframes[0].p);
+    seg_drawer.init();
+    seg_drawer.uniform_parameter.color = {0,0,1};
+    rope_node = mesh_primitive_sphere(0.02f);
+    rope_node.uniform.color = {1,0,0};
 
     // Setup initial camera mode and position
     scene.camera.camera_type = camera_control_spherical_coordinates;
@@ -163,7 +65,7 @@ void scene_model::setup_data(std::map<std::string,GLuint>& , scene_structure& sc
     It is used to compute time-varying argument and perform data data drawing */
 void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_structure& scene, gui_structure& )
 {
-    timer.update();
+    const float dt = timer.update();
     set_gui();
 
     // Current time
@@ -219,8 +121,7 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
     // ************************************
 
     // Exercise 4.2, 4.3 bird
-    //bird["body"].transform.translation = {0,0,2.0f};
-    update_global_position(bird["body"], t, keyframes);
+    vec3 bird_p = update_global_position(bird["body"], t, keyframes);
     update_bird_inner(t);
 
     bird.update_local_to_global_coordinates();
@@ -228,12 +129,29 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
     draw(bird, scene.camera);
     // ************************************
 
+    // Exercise 5, rope
+    update_rope(dt);
+    rope_p[N_rope_node+1] = bird_p;
+    for(int i=0;i<=N_rope_node;i++){
+        vec3 &p0 = rope_p[i];
+        vec3 &p1 = rope_p[i+1];
+
+        seg_drawer.uniform_parameter.p1 = p0;
+        seg_drawer.uniform_parameter.p2 = p1;
+        seg_drawer.draw(shaders["segment_im"], scene.camera);
+
+        rope_node.uniform.transform.translation = p0;
+        draw(rope_node, scene.camera, shaders["mesh"]);
+    }
+
     if( gui_scene.wireframe ){ // wireframe if asked from the GUI
         glPolygonOffset( 1.0, 1.0 );
         draw(terrain, scene.camera, shaders["wireframe"]);
     }
 }
 
+
+/*********** Utilities***********/
 // Evaluate height of the terrain for any (u,v) \in [0,1]
 float evaluate_terrain_z(float u, float v)
 {
@@ -391,6 +309,18 @@ mesh create_tree_foliage(float radius, float height, float z_offset)
     return m;
 }
 
+// Exercise 2.3, function to initialize tree positions
+void scene_model::update_tree_position(){
+    srand((unsigned int)(time(NULL)));
+    int N = rand()%10;
+    tree_position.resize(N);
+    for(int i=0;i<N;i++){
+        float u = rand_interval();
+        float v = rand_interval();
+        tree_position[i] = evaluate_terrain(u, v) - vec3(0,0,0.1);
+    }
+}
+
 // Exercise 3.3, Billboards
 mesh create_grass(){
     mesh surface_cpu;
@@ -399,6 +329,18 @@ mesh create_grass(){
     surface_cpu.connectivity = {{0,1,2}, {0,2,3}};
 
     return surface_cpu;
+}
+
+// Exercise 3.3, function to initialize grass positions
+void scene_model::update_grass_position(){
+    srand((unsigned int)(time(NULL)));
+    int N = rand()%50;
+    grass_position.resize(N);
+    for(int i=0;i<N;i++){
+        float u = rand_interval();
+        float v = rand_interval();
+        grass_position[i] = evaluate_terrain(u, v) - vec3(0,0,0.05);
+    }
 }
 
 // Exercise 3.4, Sky 
@@ -459,7 +401,88 @@ hierarchy_mesh_drawable create_bird(){
     return bird;
 }
 
-vec3 cardinal_spline_interpolation(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K)
+// Exercise 4.3, initialize bird position and timer
+void scene_model::initialize_bird(){
+    // Initial Keyframe data vector of (position, time)
+    // keyframes = { { {-1,1,2}   , 0.0f  },
+    //               { {0,1,2}    , 1.0f  },
+    //               { {1,1,2}    , 2.0f  },
+    //               { {1,2,2}    , 2.5f  },
+    //               { {2,2,2}    , 3.0f  },
+    //               { {2,2,3}    , 3.5f  },
+    //               { {2,0,3.5}  , 3.75f  },
+    //               { {1.5,-1,3} , 4.5f  },
+    //               { {1.5,-1,2} , 5.0f  },
+    //               { {1,-1,2}   , 6.0f  },
+    //               { {0,-0.5,2} , 7.0f },
+    //               { {-1,-0.5,2}, 8.0f },
+    //               { {-1,1,2}   , 9.0f },
+    //             }; 
+    for(int i=0;i<12;i++){
+        keyframes.push_back({{2.0f*sin(2*3.14f/12*i), 2.0f*cos(2*3.14f/12*i), 2.0f+0.2f*sin(2*3.14f/12*i)}, (float)i});
+    }
+    
+    // Initial orientation
+    vec3 initial_ori = keyframes[1].p - keyframes[keyframes.size()-1].p;
+    bird["body"].transform.rotation = rotation_between_vector_mat3({1,0,0}, initial_ori);
+
+    // Set timer bounds
+    if(keyframes.size()<4) exit(1);
+    timer.t_min = keyframes[0].t;
+    timer.t_max = keyframes[keyframes.size()-1].t;
+    timer.t = timer.t_min;
+}
+
+ // Exercise 4.2, inner bird animation
+void scene_model::update_bird_inner(float t){
+
+    //head nodding
+    mat3 const R_head = rotation_from_axis_angle_mat3({0,1,0}, 0.25*std::sin(3.14f*t) );
+    bird["head"].transform.rotation = R_head;
+
+    //wing filpping
+    mat3 const R_Bwing = rotation_from_axis_angle_mat3({1,0,0}, 0.5*std::sin(2*3.14f*t) );
+    bird["back_l"].transform.rotation = R_Bwing;
+    bird["back_r"].transform.rotation = mat3{1,0,0, 0,-1,0, 0,0,1}*R_Bwing;
+
+    mat3 const R_Fwing = rotation_from_axis_angle_mat3({1,0,0}, 0.5*std::sin(2*3.14f*t) );
+    bird["front_l"].transform.rotation = R_Fwing;
+    bird["front_r"].transform.rotation = R_Fwing;
+}
+
+// Exercise 4.3, outer bird animation
+vec3 scene_model::update_global_position(hierarchy_mesh_drawable_node &obj, float t, vcl::buffer<vec3t> const& v){
+    //index_at_value t
+    const size_t N = v.size();
+    assert(v.size()>=2);
+    assert(t>=v[0].t);
+    assert(t<v[N-1].t);
+
+    size_t idx=0;
+    while( v[idx+1].t<t )
+        ++idx;
+
+    const float t0 = keyframes[(idx-1)%N].t; // t_{i-1}
+    const float t1 = keyframes[ idx   %N].t; // t_i
+    const float t2 = keyframes[(idx+1)%N].t; // t_{i+1}
+    const float t3 = keyframes[(idx+2)%N].t; // t_{i+2}
+
+    const vec3& p0 = keyframes[(idx-1)%N].p; // = p_{i-1}
+    const vec3& p1 = keyframes[ idx   %N].p; // = p_i
+    const vec3& p2 = keyframes[(idx+1)%N].p; // = p_{i+1}
+    const vec3& p3 = keyframes[(idx+2)%N].p; // = p_{i+2}
+
+    vec3 p = cardinal_spline_interpolation(t,t0,t1,t2,t3,p0,p1,p2,p3,K);
+    obj.transform.translation = p;
+
+    // rotation according to tangent
+    vec3 tan0 = cardinal_spline_tangent(t,t0,t1,t2,t3,p0,p1,p2,p3,K);
+    obj.transform.rotation = rotation_between_vector_mat3({1,0,0}, tan0);
+
+    return p;
+}
+
+vec3 scene_model::cardinal_spline_interpolation(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K)
 {
     const float s = (t-t1)/(t2-t1);
     const vec3 d1 = 2*K*(p2-p0)/(t2-t0);
@@ -468,13 +491,62 @@ vec3 cardinal_spline_interpolation(float t, float t0, float t1, float t2, float 
     return (2*s*s*s-3*s*s+1)*p1+(s*s*s-2*s*s+s)*d1+(-2*s*s*s+3*s*s)*p2+(s*s*s-s*s)*d2;
 }
 
-vec3 cardinal_spline_tangent(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K)
+vec3 scene_model::cardinal_spline_tangent(float t, float t0, float t1, float t2, float t3, const vec3& p0, const vec3& p1, const vec3& p2, const vec3& p3, float K)
 {
     const float s = (t-t1)/(t2-t1);
     const vec3 d1 = 2*K*(p2-p0)/(t2-t0);
     const vec3 d2 = 2*K*(p3-p1)/(t3-t1);
 
     return (6*s*s-6*s)*p1+(3*s*s-4*s+1)*d1+(-6*s*s+6*s)*p2+(3*s*s-2*s)*d2;
+}
+
+void scene_model::initialize_rope(const vec3& initial_end_point){
+    vec3 seg = initial_end_point / N_rope_node;
+    L0 = norm(seg);
+    for(int i=0;i<=N_rope_node;i++){
+        rope_p.push_back(i*seg);
+        rope_v.push_back({0,0,0});
+    }
+}
+
+void scene_model::update_rope(float dt){
+    const float K = 10.0f;
+    const float mu = 1.0f;
+    dt /= 1000;
+    for(int i=N_rope_node;i>0;i--){
+        for(int j=0;j<1000;j++){
+            // force (used as acceleration)
+            const vec3 f_spring_1 = spring_force(rope_p[i], rope_p[i+1], L0, K);
+            const vec3 f_spring_2 = spring_force(rope_p[i], rope_p[i-1], L0, K);
+            const vec3 gravity = {0,0,-0.5f};
+            const vec3 drag = -mu*rope_v[i];
+
+            // velocity
+            rope_v[i] += (f_spring_1+f_spring_2+gravity+drag)*dt;
+
+            // position
+            rope_p[i] += rope_v[i]*dt;
+
+            // stretch limit
+            const float L = norm(rope_p[i]-rope_p[i+1]);
+            if(L>4*L0){
+                rope_p[i] = rope_p[i+1] - normalize(rope_p[i+1]-rope_p[i])*4*L0;
+            }
+        }
+        // collision detection
+        const float u = rope_p[i].x/20+0.5;
+        const float v = rope_p[i].y/20+0.5; // cf evaluate_terrain
+        const float h = evaluate_terrain_z(u, v);
+        if(rope_p[i].z < h) rope_p[i].z = h;
+    }
+}
+
+vec3 scene_model::spring_force(const vec3& pi, const vec3& pj, float L0, float K)
+{
+    // Exercise 5.2
+    vec3 U = pj - pi;
+    float L = norm(U);
+    return K*(L-L0)*U/L;
 }
 
 void scene_model::set_gui()
