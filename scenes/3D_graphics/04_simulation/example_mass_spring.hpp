@@ -19,6 +19,7 @@ struct scene_model : scene_base
 
     particle_element pA;
     particle_element pB;
+    particle_element pC;
     float L0;
 
 

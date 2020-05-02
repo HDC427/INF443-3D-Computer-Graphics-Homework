@@ -53,7 +53,7 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
         particle_structure new_particle;
         const vec3 p0 = {0,0,0};
 
-        // Initial speed is random. (x,z) components are uniformly distributed along a circle.
+        // Initial speed is random. (x,y) components are uniformly distributed along a circle.
         const float theta     = 2*3.14f*distrib(generator);
         const vec3 v0 = vec3( std::cos(theta), std::sin(theta), 5.0f);
 
@@ -79,9 +79,17 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
 
 
     // Remove particles that are too low
-    for(auto it = particles.begin(); it!=particles.end(); ++it)
+    for(auto it = particles.begin(); it!=particles.end(); ++it){
         if( it->p.z < -3)
             it = particles.erase(it);
+        
+        // Exercise 5.1, treatment of richochet
+        vec3 xy0 = {it->p.x, it->p.y, 0};
+        if( it->p.z < 0 && dot(xy0, xy0) <= 4.0){ // radius of disc is 2
+            it->v.z = -it->v.z * 0.8; // richochet with loss of energie
+            it->p = xy0;
+        }
+    }
 
 
     // Display particles

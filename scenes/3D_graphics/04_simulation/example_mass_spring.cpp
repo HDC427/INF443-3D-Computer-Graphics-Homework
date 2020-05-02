@@ -13,8 +13,10 @@ static void set_gui(timer_basic& timer);
 /** Compute spring force applied on particle pi from particle pj */
 vec3 spring_force(const vec3& pi, const vec3& pj, float L0, float K)
 {
-    // TO DO: correct the computation of this force value
-    return {0,0,0};
+    // Exercise 5.2
+    vec3 U = pj - pi;
+    float L = norm(U);
+    return K*(L-L0)*U/L;
 }
 
 
@@ -23,10 +25,14 @@ void scene_model::setup_data(std::map<std::string,GLuint>& , scene_structure& , 
     // Initial position and speed of particles
     // ******************************************* //
     pA.p = {0,0,0};     // Initial position of particle A
-    pB.v = {0,0,0};     // Initial speed of particle A
+    pA.v = {0,0,0};     // Initial speed of particle A
 
     pB.p = {0.5f,0,0};  // Initial position of particle B
     pB.v = {0,0,0};     // Initial speed of particle B
+
+    // Exercise 5.3, a third particle
+    pC.p = {1.0f,0,0};
+    pC.v = {0,0,0};
 
     L0 = 0.4f; // Rest length between A and B
 
@@ -70,9 +76,12 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
 
     // Forces
     const vec3 f_spring  = spring_force(pB.p, pA.p, L0, K);
-    const vec3 f_weight  = {0,0,0}; // TO DO: correct this force value
-    const vec3 f_damping = {0,0,0}; // TO DO: correct this force value
-    const vec3 F = f_spring+f_weight+f_damping;
+    const vec3 f_weight  = m*g; // Exercise 5.2, gravity
+    const vec3 f_damping = -mu*pB.v; // Exercise 5.2, air drag
+    const vec3 f_damping_C = -mu*pC.v;
+    const vec3 f_spring_C_B = spring_force(pB.p, pC.p, L0, K); // Exercise 5.3, a third particle
+    const vec3 F = f_spring+f_weight+f_damping+f_spring_C_B;
+    const vec3 F_C = -f_spring_C_B+f_weight+f_damping_C;
 
     // Numerical Integration (Verlet)
     {
@@ -81,6 +90,15 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
         vec3& v = pB.v; // speed of particle
 
         v = v + dt*F/m;
+        p = p + dt*v;
+    }
+
+    // Exercise 5.3, a third particle
+    {
+        vec3& p = pC.p; // position of particle
+        vec3& v = pC.v; // speed of particle
+
+        v = v + dt*F_C/m;
         p = p + dt*v;
     }
 
@@ -99,12 +117,20 @@ void scene_model::frame_draw(std::map<std::string,GLuint>& shaders, scene_struct
     sphere.uniform.color = {1,0,0};
     draw(sphere, scene.camera, shaders["mesh"]);
 
+    // particle pc
+    sphere.uniform.transform.translation = pC.p;
+    sphere.uniform.color = {0,0,1};
+    draw(sphere, scene.camera, shaders["mesh"]);
+
     // Spring pa-pb
     segment_drawer.uniform_parameter.p1 = pA.p;
     segment_drawer.uniform_parameter.p2 = pB.p;
     segment_drawer.draw(shaders["segment_im"],scene.camera);
 
-
+    // Spring pb-pc
+    segment_drawer.uniform_parameter.p1 = pC.p;
+    segment_drawer.uniform_parameter.p2 = pB.p;
+    segment_drawer.draw(shaders["segment_im"],scene.camera);
 
     draw(borders, scene.camera, shaders["curve"]);
 }
